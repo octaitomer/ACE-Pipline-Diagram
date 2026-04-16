@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,sans-serif;background:#0d1117;color:#e6edf3;padding:20px 16px 48px;font-size:15px;}
+
+h2{font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:#7d8590;margin-bottom:22px;text-align:center;}
+
+.diagram{display:flex;flex-direction:column;gap:0;max-width:940px;margin:0 auto;}
+
+.phase{margin-top:26px;}
+.phase-label{font-size:12px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;padding:5px 12px;border-radius:4px;display:inline-block;margin-bottom:12px;}
+.ph-commercial{background:rgba(56,139,253,.13);color:#58a6ff;border:1px solid rgba(56,139,253,.28);}
+.ph-technical{background:rgba(29,158,117,.13);color:#3fb950;border:1px solid rgba(29,158,117,.28);}
+.ph-deploy{background:rgba(187,128,9,.13);color:#e3b341;border:1px solid rgba(187,128,9,.28);}
+.ph-live{background:rgba(163,113,247,.13);color:#a371f7;border:1px solid rgba(163,113,247,.28);}
+
+.lane{display:grid;gap:10px;}
+.cols2{grid-template-columns:1fr 1fr;}
+.cols3{grid-template-columns:1fr 1fr 1fr;}
+.cols1{grid-template-columns:1fr;}
+
+/* NODE */
+.node{
+  background:#161b22;
+  border:1px solid #30363d;
+  border-radius:9px;
+  padding:13px 16px 11px;
+  position:relative;
+  cursor:default;
+  transition:border-color .18s, background .18s;
+}
+.node:hover{background:#1c2330;border-color:#484f58;}
+.node .ntitle{font-size:15px;font-weight:600;color:#e6edf3;margin-bottom:5px;line-height:1.3;}
+.node .ndesc{font-size:13px;color:#8b949e;line-height:1.55;}
+.node .io{margin-top:8px;display:flex;flex-direction:column;gap:3px;}
+.node .io-row{font-size:12px;display:flex;gap:5px;align-items:flex-start;line-height:1.4;}
+.io-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:2px 5px;border-radius:3px;flex-shrink:0;margin-top:1px;}
+.io-in{background:rgba(56,139,253,.12);color:#58a6ff;border:1px solid rgba(56,139,253,.22);}
+.io-out{background:rgba(63,185,80,.12);color:#3fb950;border:1px solid rgba(63,185,80,.22);}
+.io-text{color:#8b949e;}
+.node .mod-tag{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;position:absolute;top:10px;right:10px;padding:2px 7px;border-radius:3px;background:rgba(57,211,187,.1);color:#39d3bb;border:1px solid rgba(57,211,187,.22);}
+
+/* ACCENT BORDER */
+.n-blue{border-left:3px solid #58a6ff;}
+.n-green{border-left:3px solid #3fb950;}
+.n-amber{border-left:3px solid #e3b341;}
+.n-purple{border-left:3px solid #a371f7;}
+.n-red{border-left:3px solid #f85149;}
+.n-teal{border-left:3px solid #39d3bb;}
+.n-guardian{border:2px solid rgba(248,81,73,.35);border-left:3px solid #f85149;}
+
+/* TOOLTIP */
+.node{position:relative;}
+.tooltip{
+  display:none;
+  position:absolute;
+  z-index:100;
+  top:calc(100% + 8px);
+  left:0;
+  width:280px;
+  background:#1c2330;
+  border:1px solid #30363d;
+  border-radius:8px;
+  padding:12px 14px;
+  font-size:12.5px;
+  color:#c9d1d9;
+  line-height:1.55;
+  box-shadow:0 8px 24px rgba(0,0,0,.45);
+  pointer-events:none;
+}
+.tooltip::before{
+  content:'';
+  position:absolute;
+  top:-6px;left:18px;
+  width:10px;height:10px;
+  background:#1c2330;
+  border-left:1px solid #30363d;
+  border-top:1px solid #30363d;
+  transform:rotate(45deg);
+}
+.node:hover .tooltip{display:block;}
+.tooltip strong{color:#e6edf3;font-weight:600;}
+.tooltip ul{padding-left:14px;margin-top:4px;}
+.tooltip ul li{margin-bottom:2px;}
+
+/* GATE */
+.gate-wrap{display:flex;align-items:center;gap:14px;margin:14px 0 6px;padding:10px 14px;background:#161b22;border:1px solid rgba(227,179,65,.25);border-radius:8px;cursor:default;transition:background .18s;}
+.gate-wrap:hover{background:#1c2330;}
+.gate-wrap:hover .gate-tooltip{display:block;}
+.gate-diamond{width:24px;height:24px;background:#161b22;border:2px solid #e3b341;transform:rotate(45deg);flex-shrink:0;}
+.gate-text .gate-title{font-size:14px;font-weight:600;color:#e3b341;}
+.gate-text .gate-sub{font-size:12px;color:#7d8590;margin-top:2px;}
+.gate-tooltip{display:none;position:absolute;z-index:100;top:calc(100% + 8px);left:0;width:310px;background:#1c2330;border:1px solid #30363d;border-radius:8px;padding:12px 14px;font-size:12.5px;color:#c9d1d9;line-height:1.55;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;}
+.gate-tooltip strong{color:#e6edf3;}
+.gate-tooltip ul{padding-left:14px;margin-top:4px;}
+.gate-tooltip ul li{margin-bottom:2px;}
+
+/* ARROW */
+.arrow{text-align:center;font-size:22px;color:#484f58;padding:4px 0;line-height:1;}
+
+/* IDF CALLOUT */
+.idf-flow{background:rgba(56,139,253,.07);border:1px dashed rgba(56,139,253,.3);border-radius:7px;padding:8px 14px;font-size:13px;color:#8b949e;text-align:center;margin:6px 0 2px;}
+.idf-flow strong{color:#58a6ff;}
+
+/* BADGE */
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;margin-left:6px;}
+.b-off{background:rgba(248,81,73,.1);color:#f85149;border:1px solid rgba(248,81,73,.22);}
+.b-on{background:rgba(63,185,80,.1);color:#3fb950;border:1px solid rgba(63,185,80,.22);}
+.b-new{background:rgba(163,113,247,.1);color:#a371f7;border:1px solid rgba(163,113,247,.22);}
+</style>
+</head>
+<body>
+<h2>ACE — Deployment Procedure &nbsp;·&nbsp; hover any box for details</h2>
+<div class="diagram">
+
+<!-- ════════════ PHASE 1: COMMERCIAL ════════════ -->
+<div class="phase">
+  <div class="phase-label ph-commercial">Phase 1 — Customer & Commercial</div>
+  <div class="lane cols3">
+
+    <div class="node n-blue" style="position:relative">
+      <div class="ntitle">Discovery & Qualification</div>
+      <div class="ndesc">Sales-led identification of site suitability, cooling type, BMS/DCIM stack, and commercial fit.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Customer enquiry, site information</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Qualified prospect, NDA signed, ROI estimate</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Key activities</strong>
+        <ul>
+          <li>Identify DC type, tier, power capacity, PUE baseline</li>
+          <li>Map existing tech stack: DCIM, BMS, EMS, cooling technology</li>
+          <li>Estimate potential savings via ROI calculator</li>
+          <li>Confirm budget holder, decision-maker, and champions</li>
+          <li>Sign NDA if required</li>
+        </ul>
+        <br/><strong>Owner:</strong> Account Manager
+      </div>
+    </div>
+
+    <div class="node n-blue" style="position:relative">
+      <div class="ntitle">Proposal & MSA</div>
+      <div class="ndesc">Agree Pilot success criteria, pricing (20% of simulated savings), billing date, and sign Master Services Agreement.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Qualified prospect, simulated savings estimate</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Signed MSA, confirmed Pilot start date</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Key activities</strong>
+        <ul>
+          <li>Present solution overview and demo</li>
+          <li>Agree pricing methodology: 20% of forecasted savings</li>
+          <li>Define and agree Pilot success criteria</li>
+          <li>Complete Site Onboarding Doc (basic DC info)</li>
+          <li>Set up Teams channel and weekly check-in cadence</li>
+        </ul>
+        <br/><strong>Owner:</strong> Account Manager
+      </div>
+    </div>
+
+    <div class="node n-blue" style="position:relative">
+      <div class="ntitle">Infrastructure & Integration Workshops</div>
+      <div class="ndesc">Two distinct technical workshops to define cooling zones, BMS/DCIM integration strategy, and data dictionary availability.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Signed MSA, Site Onboarding Doc</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Completed Site Onboarding Doc, confirmed integration strategy</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Infrastructure Workshop</strong> (Ivan + Terry)
+        <ul>
+          <li>Cooling system layout, zones, equipment specs</li>
+          <li>Technical settings for DC install</li>
+        </ul>
+        <strong>Integration Workshop</strong> (Ivan + Sam)
+        <ul>
+          <li>Data dictionary completeness check</li>
+          <li>Confirm BMS/DCIM platform and integration protocol</li>
+          <li>Agree where to install ACE</li>
+          <li>Validate historic energy data availability</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════════════ PHASE 2: ACE DISCOVERY ════════════ -->
+<div class="phase">
+  <div class="phase-label ph-technical">Phase 2 — ACE Discovery (3-Module Onboarding)</div>
+  <div class="lane cols3">
+
+    <div class="node n-teal" style="position:relative">
+      <div class="mod-tag">Module 1</div>
+      <div class="ntitle">Readiness Assessment</div>
+      <div class="ndesc">22 questions across 6 categories. Hard blockers force a "Not Ready" verdict. Provisions Teams channel on completion.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Site information from workshops</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Readiness score (0–100), Teams channel, integration path</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Categories assessed:</strong>
+        <ul>
+          <li>About You · Your Facility · Cooling</li>
+          <li>Sensors & Data · Integration · Performance</li>
+        </ul>
+        <strong>Readiness levels:</strong>
+        <ul>
+          <li>Pilot Ready ≥80 · Ready ≥60</li>
+          <li>Partially Ready ≥35 · Not Ready &lt;35</li>
+        </ul>
+        <strong>Hard blockers:</strong> free-air-only cooling; fixed setpoints (no actuation possible)
+        <br/><br/>Module 2 unlocks at Partially Ready or above.
+      </div>
+    </div>
+
+    <div class="node n-teal" style="position:relative">
+      <div class="mod-tag">Module 2</div>
+      <div class="ntitle">Site Configuration</div>
+      <div class="ndesc">Collects facility geometry, cooling system detail, actuator bounds, and BMS/DCIM config. Generates the simulation file and pre-populates ACE Launchpad.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Module 1 output, site documents (SLDs, mechanical drawings)</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text"><strong style="color:#58a6ff">eplus_cfg.yaml</strong> → SimFarm input; ACE Launchpad pre-populated; Jira project auto-created</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Sections collected:</strong>
+        <ul>
+          <li>2.1 Facility & Geometry (hall dims, rack count, bypass fraction)</li>
+          <li>2.2 Cooling System (COP, setpoints, fan parameters)</li>
+          <li>2.3 Control & Actuators (fan speed, temp min/max bounds)</li>
+          <li>2.4 Integration Config (BMS protocol, API endpoint, write-back flag)</li>
+          <li>2.5 IDF Generation — produces <strong>eplus_cfg.yaml</strong></li>
+        </ul>
+        <strong>Claude AI</strong> assists pre-population by extracting fields from uploaded site documents.
+      </div>
+    </div>
+
+    <div class="node n-teal" style="position:relative">
+      <div class="mod-tag">Module 3</div>
+      <div class="ntitle">Go-Live Checklist</div>
+      <div class="ndesc">Final validation gates: connectivity, data quality, model readiness, operational readiness, and SecOps sign-off before deployment authorised.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Module 2 config, 7-day continuous data stream</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Signed PDF go-live report, deployment authorisation</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Validation gates:</strong>
+        <ul>
+          <li>3.1 Connectivity: Edge Client reachable, BMS data flowing, write-back tested</li>
+          <li>3.2 Data Quality: 7 days continuous, sensor granularity confirmed, PUE baseline recorded</li>
+          <li>3.3 Model Readiness: surrogate trained, RL agent in shadow mode</li>
+          <li>3.4 Operational: ops team briefed, escalation contacts confirmed, rollback procedure tested</li>
+          <li>3.5 Digital sign-off by customer + OctaiPipe engineer</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════════════ PHASE 3: SIMULATION PIPELINE ════════════ -->
+<div class="phase">
+  <div class="phase-label ph-technical">Phase 3 — Digital Twin & RL Pipeline</div>
+  <div class="idf-flow"><strong>eplus_cfg.yaml</strong> from ACE Discovery Module 2 is the primary input to SimFarm and the EnergyPlus model</div>
+
+  <div class="lane cols2" style="margin-top:8px;">
+
+    <div class="node n-green" style="position:relative">
+      <div class="ntitle">EnergyPlus Model</div>
+      <div class="ndesc">Physics-based simulation of the data centre. Represents thermal zones, mechanical plant, actuators, and IT load. Foundation for surrogate training.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">eplus_cfg.yaml, weather file (.epw), site drawings</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Synthetic simulation data covering full range of operating conditions</span></div>
+      </div>
+      <div class="tooltip">
+        EnergyPlus simulates the real DC environment so the RL agent can learn without risk to real infrastructure.
+        <br/><br/><strong>Critical assumption:</strong> EnergyPlus provides an accurate, unbiased distribution of transition dynamics. This is validated through Sim2Real tests before go-live.
+        <br/><br/><strong>Plausibility checks at this stage:</strong>
+        <ul>
+          <li>Annual PUE consistent with site expectation</li>
+          <li>Sensible response to IT load and outdoor temperature changes</li>
+          <li>No unrealistic energy spikes or simulation errors</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="node n-green" style="position:relative">
+      <div class="ntitle">SimFarm — Surrogate Model</div>
+      <div class="ndesc">Uses EnergyPlus outputs to train a fast ML-based surrogate. Enables rapid RL training at scale without running the full EnergyPlus simulator on every step.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">EnergyPlus simulation data (eplus_cfg.yaml-driven runs)</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Fast ML surrogate model of the data centre thermal system</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Purpose:</strong> Replace the slow physics simulation with a fast ML model for RL training loops.
+        <br/><br/>May use graph neural networks or other ML approaches trained on physics-based simulation data and/or operational data.
+        <br/><br/><strong>Surrogate also used for:</strong>
+        <ul>
+          <li>Generating savings estimate for customer pricing discussion</li>
+          <li>Running the VM farm simulation environment for Solution Assembly</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <div class="lane cols2">
+
+    <div class="node n-green" style="position:relative">
+      <div class="ntitle">SynerGym — RL Training Environment</div>
+      <div class="ndesc">Wraps the surrogate model as a standardised gym environment. The RL agent interacts with it via actions and reward signals to learn an optimal cooling policy.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Surrogate model, actuator config (from ACE Discovery 2.3), reward function</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Trained RL policy (agent checkpoints)</span></div>
+      </div>
+      <div class="tooltip">
+        SynerGym is the RL training environment — not just a data translator.
+        <br/><br/><strong>Training validates:</strong>
+        <ul>
+          <li>Agent policy is sensible (no extreme or unrealistic actions)</li>
+          <li>Thermal SLA is maintained in simulation</li>
+          <li>Implied energy saving ≥10% vs customer baseline</li>
+        </ul>
+        <strong>Safe agent tests before go-live:</strong>
+        <ul>
+          <li>Sim2Real alignment (simulated vs real response times)</li>
+          <li>Safe guardrail behaviour under constraint conflicts</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="node n-green" style="position:relative">
+      <div class="ntitle">RL Agent (Optimiser)</div>
+      <div class="ndesc">Trained policy that recommends cooling set-point changes to minimise energy while maintaining thermal SLA. Target: ≥10% cooling energy reduction.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Live sensor data: temperatures, humidity, IT load, weather</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Set-point recommendations (supply air temp, fan speed, chilled water temp)</span></div>
+      </div>
+      <div class="tooltip">
+        The Optimiser may be built using RL or other optimisation methodologies. It is trained using the Digital Twin (EnergyPlus + surrogate) as its simulation environment.
+        <br/><br/><strong>Actuators controlled (examples):</strong>
+        <ul>
+          <li>Cooling unit supply air temperature setpoints</li>
+          <li>Fan speed / airflow rate</li>
+          <li>Chilled water supply temperature</li>
+          <li>Cooling mode selection (free cooling / mechanical)</li>
+        </ul>
+        <strong>Note:</strong> The accuracy of the Digital Twin directly determines the safety of the Optimiser's recommendations.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════════════ GATE 1 ════════════ -->
+<div style="position:relative">
+  <div class="gate-wrap">
+    <div class="gate-diamond"></div>
+    <div class="gate-text">
+      <div class="gate-title">Readiness Gate 1 — Deployable?</div>
+      <div class="gate-sub">Structural completeness · Plausibility checks passed · Optimiser trained with sensible policy (≥10% implied saving) · SecOps sign-off</div>
+    </div>
+  </div>
+  <div class="gate-tooltip">
+    <strong>What "Deployable" means:</strong> the model can be deployed to site for Ghost Mode — it does NOT authorise live recommendations.
+    <br/><br/><strong>Required evidence:</strong>
+    <ul>
+      <li>All thermal zones, plant, and actuators represented</li>
+      <li>PUE within expected site range</li>
+      <li>Model responds correctly to IT load and weather changes</li>
+      <li>Trained Optimiser policy is sensible and implies ≥10% savings</li>
+      <li>Digital Twin documentation report produced</li>
+      <li>SecOps/Technical Readiness Check passed (Go/No-Go decision)</li>
+    </ul>
+    <strong>Source:</strong> Digital Twin Model Readiness Definitions (CAAS space)
+  </div>
+</div>
+
+<div class="arrow">↓ <span style="font-size:13px;color:#3fb950;font-weight:500;">Approved → proceed to deployment</span></div>
+
+<!-- ════════════ PHASE 4: DEPLOYMENT ════════════ -->
+<div class="phase">
+  <div class="phase-label ph-deploy">Phase 4 — Deployment Infrastructure</div>
+  <div class="lane cols2">
+
+    <div class="node n-purple" style="position:relative">
+      <div class="ntitle">ACE Launchpad</div>
+      <div class="ndesc">Deployment and configuration platform. Pre-populated from ACE Discovery Module 2 data — minimal manual intervention needed.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">ACE Discovery Module 2 payload (config.json, HVAC config, actuator config, integration credentials)</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Configured Docker Compose deployment package, secrets provisioned</span></div>
+      </div>
+      <div class="tooltip">
+        ACE Launchpad is the single deployment control plane. Module 2 data maps directly to:
+        <ul>
+          <li><strong>configuration.json</strong> seed values (hall geometry, rack density)</li>
+          <li><strong>Docker Compose env vars</strong> (cooling unit parameters, COP, fan config)</li>
+          <li><strong>RL agent config files</strong> (actuator bounds, observation nodes)</li>
+          <li><strong>Integration service config</strong> (BMS/DCIM endpoint, protocol, polling interval, write-back flag)</li>
+          <li><strong>aceblob:// assets</strong> (SimFarm model inputs)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="node n-purple" style="position:relative">
+      <div class="ntitle">Edge VM (On-site)</div>
+      <div class="ndesc">Local virtual machine deployed at the customer data centre. Runs all ACE containers including the RL agent, Guardian, and data ingestion services.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Docker deployment package from Launchpad, network access to BMS/DCIM</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Running ACE service, live sensor ingestion, actuation capability</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Why on-site (edge)?</strong> All data processing happens at the customer site. No operational data leaves the facility — critical for security and data sovereignty.
+        <br/><br/><strong>Containers running on Edge VM:</strong>
+        <ul>
+          <li>RL agent (Optimiser)</li>
+          <li>Guardian (safety layer)</li>
+          <li>Data ingestion services (BMS/DCIM connectors)</li>
+          <li>Digital Twin model</li>
+          <li>OctaiPipe Platform monitoring</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="lane cols1" style="margin-top:10px;">
+    <div class="node n-amber" style="position:relative">
+      <div class="ntitle">BMS / DCIM Integration <span class="badge b-new">Key dependency</span></div>
+      <div class="ndesc">Edge VM connects to the customer's Building Management System (BMS) and/or DCIM. Data ingestion validated. Write-back capability tested and confirmed before any live operation.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Integration config from ACE Discovery Module 2.4 (protocol, API endpoint, polling interval)</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Live sensor data stream → Edge VM; set-point commands → BMS/DCIM actuators</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Data flowing IN from BMS/DCIM:</strong>
+        <ul>
+          <li>Supply/return air temperatures per zone</li>
+          <li>IT load (per row / hall / total)</li>
+          <li>Cooling unit status, fan speed, setpoints</li>
+          <li>Chilled water temperatures and flow rates</li>
+          <li>Energy metering (HVAC sub-systems)</li>
+        </ul>
+        <strong>Commands flowing OUT (when AI ON):</strong>
+        <ul>
+          <li>Supply air temperature setpoints</li>
+          <li>Fan speed setpoints</li>
+          <li>Chilled water temperature setpoints</li>
+        </ul>
+        Write-back is flagged and tested during ACE Discovery Module 2.4 and Module 3.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ════════════ PHASE 5: LIVE OPERATION ════════════ -->
+<div class="phase">
+  <div class="phase-label ph-live">Phase 5 — Live Operation (Activation Lifecycle)</div>
+  <div class="lane cols3">
+
+    <div class="node n-red" style="position:relative">
+      <div class="ntitle">Ghost Mode <span class="badge b-off">AI OFF</span></div>
+      <div class="ndesc">AI agent runs in parallel — observing only. Digital Twin predictions compared against real operational data. Minimum 2 weeks. No set-point changes made.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Live sensor data from BMS/DCIM</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Calibration observations, model error statistics, divergence flags</span></div>
+      </div>
+      <div class="tooltip">
+        Ghost Mode is mandatory and safety-critical. The Digital Twin must be proven accurate against real data before any live recommendations are made.
+        <br/><br/><strong>During Ghost Mode:</strong>
+        <ul>
+          <li>Customer given view-only access to OctaiPipe app</li>
+          <li>Digital Twin tuned on live operational data</li>
+          <li>If building model needs updating → redeployed from VM farm</li>
+          <li>RL agent re-trained on updated Digital Twin</li>
+        </ul>
+        <strong>Gate to exit:</strong> Readiness Gate 2 (Well-Calibrated) must be passed.
+      </div>
+    </div>
+
+    <div class="node n-amber" style="position:relative">
+      <div class="ntitle">Close Monitoring <span class="badge b-on">AI ON</span></div>
+      <div class="ndesc">Agent activated with human in the loop. Guardian validates every recommendation before it reaches the BMS. Automation rules agreed and tuned iteratively.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Well-Calibrated model, agreed automation rules</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Validated set-point changes to BMS, confirmed automation rules</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Duration:</strong> Minimum 2 weeks of close monitoring before full autonomous operation.
+        <br/><br/><strong>During Close Monitoring:</strong>
+        <ul>
+          <li>Human reviews and approves each recommendation batch</li>
+          <li>Automation rules adjusted as needed</li>
+          <li>Guardian system actively filtering unsafe actions</li>
+          <li>Customer training and enablement sessions</li>
+          <li>Batched learning from real feedback or simulation</li>
+        </ul>
+        <strong>Go/No-Go decision</strong> taken at end of this phase before full autonomy.
+      </div>
+    </div>
+
+    <div class="node n-green" style="position:relative">
+      <div class="ntitle">Full Operation <span class="badge b-on">AI ON</span></div>
+      <div class="ndesc">Autonomous cooling optimisation. Continuous learning from live data. Pilot results reviewed, savings validated, MSA updated for full commercial contract.</div>
+      <div class="io">
+        <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">Confirmed automation rules, validated savings baseline</span></div>
+        <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Energy savings, PUE improvement, federated learnings to base model</span></div>
+      </div>
+      <div class="tooltip">
+        <strong>Post go-live activities:</strong>
+        <ul>
+          <li>Continuous model calibration as conditions evolve</li>
+          <li>Federate results to OctaiPipe base model (1 month after go-live)</li>
+          <li>Pilot review: validate savings vs agreed targets</li>
+          <li>If targets met → MSA updated, full contract commences</li>
+          <li>If targets not met → return to agent fine-tuning loop</li>
+        </ul>
+        <strong>Expansion:</strong> Additional halls/rooms begin a new Activation Project via ACE Discovery Activation Lifecycle.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- GATE 2 -->
+<div style="position:relative;margin-top:12px;">
+  <div class="gate-wrap">
+    <div class="gate-diamond"></div>
+    <div class="gate-text">
+      <div class="gate-title">Readiness Gate 2 — Well-Calibrated?</div>
+      <div class="gate-sub">Authorises exit from Ghost Mode into Close Monitoring. Quantitative thresholds must be met and calibration report approved.</div>
+    </div>
+  </div>
+  <div class="gate-tooltip">
+    <strong>Energy calibration thresholds (ASHRAE Guideline 14 / IPMVP):</strong>
+    <ul>
+      <li>NMBE: ±5% monthly, ±10% hourly</li>
+      <li>CV(RMSE): ≤15% monthly, ≤20% hourly (IPMVP strict)</li>
+      <li>R² ≥ 0.75 at hourly resolution</li>
+    </ul>
+    <strong>Thermal calibration thresholds:</strong>
+    <ul>
+      <li>Zone/Return air RMSE ≤ 1.5°C</li>
+      <li>Supply air RMSE ≤ 1.0°C</li>
+      <li>Relative Humidity RMSE ≤ 8.0% RH</li>
+      <li>Directionality ≥ 70% at hourly resolution</li>
+    </ul>
+    <strong>Required evidence:</strong> Full calibration report reviewed and approved by Building Engineer.
+  </div>
+</div>
+
+<!-- GUARDIAN -->
+<div class="node n-guardian" style="margin-top:16px;position:relative;">
+  <div class="ntitle">Guardian System — Safety Layer <span class="badge b-new">Always active once AI ON</span></div>
+  <div class="ndesc">Sits between the RL agent and the BMS at all times. Rejects or flags any recommendation that would breach thermal SLA, exceed actuator bounds, or fall outside the model's calibrated operating envelope.</div>
+  <div class="io">
+    <div class="io-row"><span class="io-label io-in">IN</span><span class="io-text">RL agent set-point recommendations, current sensor state, SLA bounds</span></div>
+    <div class="io-row"><span class="io-label io-out">OUT</span><span class="io-text">Approved commands → BMS/DCIM; rejected commands → operator alert or auto-rollback</span></div>
+  </div>
+  <div class="tooltip">
+    <strong>Constraint priority (highest first):</strong>
+    <ol style="padding-left:14px;margin-top:4px;">
+      <li>Safety (thermal SLA, equipment limits)</li>
+      <li>Comfort (temperature stability, tenant expectations)</li>
+      <li>Efficiency (energy minimisation)</li>
+    </ol>
+    <strong>Guardian rejects a recommendation if:</strong>
+    <ul>
+      <li>Action would breach thermal SLA with uncertainty-adjusted probability</li>
+      <li>Action exceeds configured actuator bounds</li>
+      <li>System is operating outside the calibrated envelope</li>
+      <li>Communication failure or sensor anomaly detected</li>
+    </ul>
+    <strong>Reference:</strong> Jira OP-297 — Guardian rejects recommendations with chance to breach SLA after uncertainty
+  </div>
+</div>
+
+</div>
+</body>
+</html>
